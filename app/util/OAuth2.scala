@@ -1,7 +1,8 @@
 package util
 
+import org.joda.time.{DateTimeZone, DateTime}
 import play.api.http.{HeaderNames, MimeTypes}
-import play.api.libs.json.{JsArray, Json}
+import play.api.libs.json.{JsValue, JsArray, Json}
 import play.api.libs.ws.WS
 import play.api.mvc.{Action, Controller, Results}
 import play.api.{Application, Play}
@@ -125,21 +126,23 @@ object OAuth2 extends Controller {
     implicit val oneselfSyncPropertyFormat = Json.format[OneselfSyncProperty]
     implicit val eventsSyncEventFormat = Json.format[OneselfSyncEvent]
 
+    val dateTimeString = new DateTime(DateTimeZone.UTC).toString()
+
     val reputationOneselfProperty = OneselfProperty("stackoverlow", reputationCount.toString)
     val reputationEvent = OneselfEvent("1self-stackoverflow", "0.0.1",
-      reputationOneselfProperty, "2015-03-24 17:52:36 UTC", "0",
+      reputationOneselfProperty, dateTimeString, "0",
       Array("internet", "social-network", "stackoverflow", "reputation"),
       Array("sample"))
 
     val answersOneselfProperty = OneselfProperty("stackoverlow", answersCount.toString)
     val answersEvent = OneselfEvent("1self-stackoverflow", "0.0.1",
-      answersOneselfProperty, "2015-03-24 17:52:36 UTC", "0",
+      answersOneselfProperty, dateTimeString, "0",
       Array("internet", "social-network", "stackoverflow", "answers"),
       Array("sample"))
 
-    val questionsOneselfProperty = OneselfProperty("stackoverflow", questionsCount.toString)
+    val questionsOneselfProperty = OneselfProperty("1self-stackoverflow", questionsCount.toString)
     val questionsEvent = OneselfEvent("1self-stackoverflow", "0.0.1",
-      questionsOneselfProperty, "2015-03-24 17:52:36 UTC", "0",
+      questionsOneselfProperty, dateTimeString, "0",
       Array("internet", "social-network", "stackoverflow", "questions"),
       Array("sample"))
 
@@ -154,9 +157,10 @@ object OAuth2 extends Controller {
     implicit val oneselfPropertyFormat = Json.format[OneselfSyncProperty]
     implicit val eventsFormat = Json.format[OneselfSyncEvent]
     val syncStartProperty = OneselfSyncProperty("1self-stackoverlow")
+    val dateTimeString = new DateTime(DateTimeZone.UTC).toString()
 
     val syncStartEvent = OneselfSyncEvent(
-      syncStartProperty, "2015-03-24 17:52:36 UTC",
+      syncStartProperty, dateTimeString,
       Array("sync"),
       Array("start"))
 
@@ -167,9 +171,9 @@ object OAuth2 extends Controller {
     implicit val oneselfPropertyFormat = Json.format[OneselfSyncProperty]
     implicit val eventsFormat = Json.format[OneselfSyncEvent]
     val syncCompleteProperty = OneselfSyncProperty("1self-stackoverlow")
-
+    val dateTimeString = new DateTime(DateTimeZone.UTC).toString()
     val syncCompleteEvent = OneselfSyncEvent(
-      syncCompleteProperty, "2015-03-24 17:52:36 UTC",
+      syncCompleteProperty, dateTimeString,
       Array("sync"),
       Array("complete"))
 
@@ -197,6 +201,7 @@ object OAuth2 extends Controller {
   def success() = Action.async { request =>
     implicit val app = Play.current
     lazy val callbackBaseUrl = Play.application.configuration.getString("callback.base.url").get
+    lazy val apiBaseUrl = Play.application.configuration.getString("api.base.url").get
 
     request.session.get("oauth-token").fold(Future.successful(Unauthorized("No way! Error occurred"))) {
 
@@ -218,7 +223,10 @@ object OAuth2 extends Controller {
               response2 =>
                 val answerItems = (response2.json \\ "items")
 
-                val answersCount = answerItems.size.toString()
+                val answers = answerItems map { q =>
+                  q.as[List[JsValue]].size
+                }
+                val answersCount = answers(0).toString()
 
                 println("Answers count  ", answersCount)
 
@@ -226,9 +234,10 @@ object OAuth2 extends Controller {
                   response3 =>
                     val questionItems = (response3.json \\ "items")
 
-                    val questionsCount = questionItems.size.toString()
-
-                    println("Questions count  ", questionsCount)
+                    val questions = questionItems map { q =>
+                      q.as[List[JsValue]].size
+                    }
+                    val questionsCount = questions(0).toString()
 
                     val stream = registerStream(oneselfUsername, registrationToken, callbackUrl)
 
@@ -246,8 +255,9 @@ object OAuth2 extends Controller {
                 }
             }
         }
+        val redirectUrl = apiBaseUrl + "/integrations"
         Future {
-          Ok("done")
+          Redirect(redirectUrl, 302)
         }
     }
   }
@@ -273,8 +283,10 @@ object OAuth2 extends Controller {
           response2 =>
             val answerItems = (response2.json \\ "items")
 
-            println(answerItems)
-            val answersCount = answerItems.size.toString()
+            val answers = answerItems map { q =>
+              q.as[List[JsValue]].size
+            }
+            val answersCount = answers(0).toString()
 
             println("Answers count  ", answersCount)
 
@@ -282,7 +294,10 @@ object OAuth2 extends Controller {
               response3 =>
                 val questionItems = (response3.json \\ "items")
 
-                val questionsCount = questionItems.size.toString()
+                val questions = questionItems map { q =>
+                  q.as[List[JsValue]].size
+                }
+                val questionsCount = questions(0).toString()
 
                 println("Questions count  ", questionsCount)
 
