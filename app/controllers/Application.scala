@@ -3,7 +3,9 @@ package controllers
 import java.util.UUID
 
 import play.api._
+import play.api.libs.Crypto
 import play.api.mvc._
+import play.utils.UriEncoding
 import utils.Oneself
 import Oneself._
 
@@ -20,18 +22,19 @@ object Application extends Controller {
     val token = request.getQueryString("token").getOrElse("error")
 
     val callbackUrl = routes.OAuth2.callback(None, None).absoluteURL()
-    val scope = ""
+    val scope = "no_expiry"
     val state = UUID.randomUUID().toString // random confirmation string
   val redirectUrl = oauth2.getAuthorizationUrl(callbackUrl, scope, state)
 
-    Ok(views.html.index("Your new application is ready.", redirectUrl)).
+    Redirect(redirectUrl).
       withSession("oauth-state" -> state, "oneselfUsername" -> username, "registrationToken" -> token)
   }
 
-  def success() = Action.async { request =>
+  def success = Action.async { request =>
     implicit val app = Play.current
     lazy val callbackBaseUrl = Play.application.configuration.getString("callback.base.url").get
     lazy val apiBaseUrl = Play.application.configuration.getString("api.base.url").get
+    lazy val encryptionKey = Play.application.configuration.getString("encryption.key").get
 
     request.session.get("oauth-token").fold(Future.successful(Unauthorized("No way! Error occurred"))) {
 
@@ -39,7 +42,11 @@ object Application extends Controller {
         val oneselfUsername = request.session.get("oneselfUsername").getOrElse("invalid");
         val registrationToken = request.session.get("registrationToken").getOrElse("invalid");
 
-        val callbackUrl = callbackBaseUrl + "/sync?username=" + oneselfUsername + "&auth_token=" + authToken + "&latestSyncField={{latestSyncField}}&streamid={{streamid}}"
+        val encryptedAuthToken = Crypto.encryptAES(authToken, encryptionKey)
+
+        val encodedEncryptedAuthToken = UriEncoding.encodePathSegment(encryptedAuthToken, "UTF-8")
+
+        val callbackUrl = callbackBaseUrl + "/sync?username=" + oneselfUsername + "&auth_token=" + encodedEncryptedAuthToken + "&latestSyncField={{latestSyncField}}&streamid={{streamid}}"
 
         for {
           reputationCount <- getReputationCount(authToken)
@@ -55,13 +62,16 @@ object Application extends Controller {
     }
   }
 
-  def sync() = Action.async { request =>
+  def sync = Action.async { request =>
     implicit val app = Play.current
+    lazy val encryptionKey = Play.application.configuration.getString("encryption.key").get
 
     val streamId = request.getQueryString("streamid").get
     //    val username = request.getQueryString("username").get
-    val authToken = request.getQueryString("auth_token").get
+    val encryptedAuthToken = request.getQueryString("auth_token").get
     val writeToken = request.headers.get("Authorization").get
+
+    val authToken = Crypto.decryptAES(encryptedAuthToken, encryptionKey)
 
     for {
       reputationCount <- getReputationCount(authToken)
