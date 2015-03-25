@@ -42,7 +42,6 @@ class OAuth2(application: Application) {
 object OAuth2 extends Controller {
   lazy val oauth2 = new OAuth2(Play.current)
 
-
   def callback(codeOpt: Option[String] = None, stateOpt: Option[String] = None) = Action.async { implicit request =>
     (for {
       code <- codeOpt
@@ -84,7 +83,13 @@ object OAuth2 extends Controller {
       .withHeaders(("Authorization", authorizationKey))
       .withHeaders(("registration-token", registrationToken))
       .withHeaders(("Content-Type", "application/json"))
-      .post(jsonObject)
+      .post(jsonObject).map { response =>
+
+      val streamJson = response.json
+      val streamId = streamJson.\("streamid").toString()
+      val writeToken = streamJson.\("writeToken").toString()
+      (streamId, writeToken)
+    }
   };
 
   def getReputationCount(authToken: String) = {
@@ -95,7 +100,11 @@ object OAuth2 extends Controller {
       .withQueryString(("access_token", authToken.toString()))
       .withQueryString(("site", "stackoverflow"))
       .withQueryString(("key", stackOverflowAppKey))
-      .get()
+      .get().map { res =>
+      val reputation = (res.json \ "items")(0) \ "reputation"
+      val reputationCount = reputation.toString()
+      reputationCount
+    }
   }
 
   def getAnswersCount(authToken: String) = {
@@ -106,7 +115,17 @@ object OAuth2 extends Controller {
       .withQueryString(("access_token", authToken.toString()))
       .withQueryString(("site", "stackoverflow"))
       .withQueryString(("key", stackOverflowAppKey))
-      .get()
+      .get().map { res =>
+
+      val answerItems = (res.json \\ "items")
+
+      val answers = answerItems map { a =>
+        a.as[List[JsValue]].size
+      }
+      val answersCount = answers(0).toString()
+
+      answersCount
+    }
   }
 
   def getQuestionsCount(authToken: String) = {
@@ -117,7 +136,17 @@ object OAuth2 extends Controller {
       .withQueryString(("access_token", authToken.toString()))
       .withQueryString(("site", "stackoverflow"))
       .withQueryString(("key", stackOverflowAppKey))
-      .get()
+      .get().map { res =>
+
+      val questionItems = (res.json \\ "items")
+
+      val questions = questionItems map { q =>
+        q.as[List[JsValue]].size
+      }
+      val questionsCount = questions(0).toString()
+
+      questionsCount
+    }
   }
 
   def convertTo1SelfEvents(reputationCount: String, answersCount: String, questionsCount: String): JsArray = {
@@ -208,51 +237,32 @@ object OAuth2 extends Controller {
 
         val callbackUrl = callbackBaseUrl + "/sync?username=" + oneselfUsername + "&auth_token=" + authToken + "&latestSyncField={{latestSyncField}}&streamid={{streamid}}"
 
-        getReputationCount(authToken).map {
-          response1 =>
-            val reputation = (response1.json \ "items")(0) \ "reputation"
-            val reputationCount = reputation.toString()
-            println(reputationCount)
-            println("Reputation count")
-            println(reputationCount);
+        val result = for {
+          reputationCount <- getReputationCount(authToken)
+          answersCount <- getQuestionsCount(authToken)
+          questionsCount <- getAnswersCount(authToken)
+          streamResp <- registerStream(oneselfUsername, registrationToken, callbackUrl)
 
-            getAnswersCount(authToken).map {
-              response2 =>
-                val answerItems = (response2.json \\ "items")
+        } yield (reputationCount, answersCount, questionsCount, streamResp)
 
-                val answers = answerItems map { q =>
-                  q.as[List[JsValue]].size
-                }
-                val answersCount = answers(0).toString()
+        result.map {
+          res =>
+            val reputationCount = res._1
+            val answersCount = res._2
+            val questionsCount = res._3
 
-                println("Answers count  ", answersCount)
+            val streamResp = res._4
 
-                getQuestionsCount(authToken).map {
-                  response3 =>
-                    val questionItems = (response3.json \\ "items")
+            val streamId = streamResp._1
+            val writeToken = streamResp._2
 
-                    val questions = questionItems map { q =>
-                      q.as[List[JsValue]].size
-                    }
-                    val questionsCount = questions(0).toString()
+            val events = convertTo1SelfEvents(reputationCount, answersCount, questionsCount)
+            sendToOneSelf(streamId, writeToken, events)
+            
+        };
 
-                    val stream = registerStream(oneselfUsername, registrationToken, callbackUrl)
-
-                    stream.map { response =>
-
-                      val streamJson = response.json
-                      val streamId = streamJson.\("streamid").toString()
-                      val writeToken = streamJson.\("writeToken").toString()
-
-                      println("Converting to 1self events format")
-                      val events = convertTo1SelfEvents(reputationCount, answersCount, questionsCount)
-                      println("Events is ", events)
-                      sendToOneSelf(streamId, writeToken, events)
-                    }
-                }
-            }
-        }
         val redirectUrl = apiBaseUrl + "/integrations"
+
         Future {
           Redirect(redirectUrl, 302)
         }
@@ -268,43 +278,22 @@ object OAuth2 extends Controller {
 
     val writeToken = request.headers.get("Authorization").get
 
-    getReputationCount(authToken).map {
-      response1 =>
-        val reputation = (response1.json \ "items")(0) \ "reputation"
-        val reputationCount = reputation.toString()
-        println(reputationCount)
-        println("Reputation count")
-        println(reputationCount);
+    val result = for {
+      reputationCount <- getReputationCount(authToken)
+      answersCount <- getQuestionsCount(authToken)
+      questionsCount <- getAnswersCount(authToken)
 
-        getAnswersCount(authToken).map {
-          response2 =>
-            val answerItems = (response2.json \\ "items")
+    } yield (reputationCount, answersCount, questionsCount)
 
-            val answers = answerItems map { q =>
-              q.as[List[JsValue]].size
-            }
-            val answersCount = answers(0).toString()
+    result.map {
+      res =>
+        val reputationCount = res._1
+        val answersCount = res._2
+        val questionsCount = res._3
 
-            println("Answers count  ", answersCount)
-
-            getQuestionsCount(authToken).map {
-              response3 =>
-                val questionItems = (response3.json \\ "items")
-
-                val questions = questionItems map { q =>
-                  q.as[List[JsValue]].size
-                }
-                val questionsCount = questions(0).toString()
-
-                println("Questions count  ", questionsCount)
-
-                println("Converting to 1self events format")
-                val events = convertTo1SelfEvents(reputationCount, answersCount, questionsCount)
-                println("Events is ", events)
-                sendToOneSelf(streamId, writeToken, events)
-            }
-        }
-    }
+        val events = convertTo1SelfEvents(reputationCount, answersCount, questionsCount)
+        sendToOneSelf(streamId, writeToken, events)
+    };
 
     Future {
       Ok("done")
