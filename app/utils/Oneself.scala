@@ -98,7 +98,7 @@ object Oneself extends Controller {
     }
   }
 
-  def convertTo1SelfEvents(reputationCount: String, answersCount: String, questionsCount: String) = {
+  def convertTo1SelfEvents(reputationCount: String, questionsCount: String, answersCount: String) = {
     val dateTimeString = new DateTime(DateTimeZone.UTC).toString()
 
     val reputationEvent = Json.obj(

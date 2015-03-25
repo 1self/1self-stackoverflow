@@ -50,11 +50,11 @@ object Application extends Controller {
 
         for {
           reputationCount <- getReputationCount(authToken)
-          answersCount <- getQuestionsCount(authToken)
-          questionsCount <- getAnswersCount(authToken)
+          questionsCount <- getQuestionsCount(authToken)
+          answersCount <- getAnswersCount(authToken)
           streamResp <- registerStream(oneselfUsername, registrationToken, callbackUrl)
           events <- Future {
-            convertTo1SelfEvents(reputationCount, answersCount, questionsCount)
+            convertTo1SelfEvents(reputationCount, questionsCount, answersCount)
           }
           _ <- sendToOneSelf(streamResp._1, streamResp._2, events)
 
@@ -75,9 +75,9 @@ object Application extends Controller {
 
     for {
       reputationCount <- getReputationCount(authToken)
-      answersCount <- getQuestionsCount(authToken)
-      questionsCount <- getAnswersCount(authToken)
-      events = convertTo1SelfEvents(reputationCount, answersCount, questionsCount)
+      questionsCount <- getQuestionsCount(authToken)
+      answersCount <- getAnswersCount(authToken)
+      events = convertTo1SelfEvents(reputationCount, questionsCount, answersCount)
       _ <- sendToOneSelf(streamId, writeToken, events)
 
     } yield Ok("Done")
