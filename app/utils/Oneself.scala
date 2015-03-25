@@ -76,6 +76,7 @@ object Oneself extends Controller {
       answersCount
     }
   }
+
   def getQuestionsCount(authToken: String) = {
     implicit val app = Play.current
     val stackOverflowAppKey = Play.application.configuration.getString("stackoverflow.app.key").get
@@ -106,7 +107,7 @@ object Oneself extends Controller {
       "dateTime" -> dateTimeString,
       "objectTags" -> Json.arr("internet", "social-network", "stackoverflow", "reputation"),
       "actionTags" -> Json.arr("sample"),
-      "properties" -> Json.obj("source" -> "1self-stackoverflow", "count" -> reputationCount.toString)
+      "properties" -> Json.obj("points" -> reputationCount.toString)
     )
 
     val answersEvent = Json.obj(
@@ -115,7 +116,7 @@ object Oneself extends Controller {
       "dateTime" -> dateTimeString,
       "objectTags" -> Json.arr("internet", "social-network", "stackoverflow", "answers"),
       "actionTags" -> Json.arr("sample"),
-      "properties" -> Json.obj("source" -> "1self-stackoverflow", "count" -> answersCount.toString)
+      "properties" -> Json.obj("answered" -> answersCount.toString)
     )
 
     val questionsEvent = Json.obj(
@@ -124,7 +125,7 @@ object Oneself extends Controller {
       "dateTime" -> dateTimeString,
       "objectTags" -> Json.arr("internet", "social-network", "stackoverflow", "questions"),
       "actionTags" -> Json.arr("sample"),
-      "properties" -> Json.obj("source" -> "1self-stackoverflow", "count" -> questionsCount.toString)
+      "properties" -> Json.obj("asked" -> questionsCount.toString)
     )
 
     val syncStartEvent = create_sync_start_event
