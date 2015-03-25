@@ -1,6 +1,6 @@
 package util
 
-import org.joda.time.{DateTimeZone, DateTime}
+import org.joda.time.{DateTime, DateTimeZone}
 import play.api.http.{HeaderNames, MimeTypes}
 import play.api.libs.json.{JsValue, JsArray, Json}
 import play.api.libs.ws.WS
@@ -121,30 +121,34 @@ object OAuth2 extends Controller {
   }
 
   def convertTo1SelfEvents(reputationCount: String, answersCount: String, questionsCount: String): JsArray = {
-    implicit val oneselfPropertyFormat = Json.format[OneselfProperty]
-    implicit val eventsFormat = Json.format[OneselfEvent]
-    implicit val oneselfSyncPropertyFormat = Json.format[OneselfSyncProperty]
-    implicit val eventsSyncEventFormat = Json.format[OneselfSyncEvent]
-
     val dateTimeString = new DateTime(DateTimeZone.UTC).toString()
 
-    val reputationOneselfProperty = OneselfProperty("stackoverlow", reputationCount.toString)
-    val reputationEvent = OneselfEvent("1self-stackoverflow", "0.0.1",
-      reputationOneselfProperty, dateTimeString, "0",
-      Array("internet", "social-network", "stackoverflow", "reputation"),
-      Array("sample"))
+    val reputationEvent = Json.obj(
+      "source" -> "1self-stackoverflow",
+      "version" -> "0.0.1",
+      "dateTime" -> dateTimeString,
+      "objectTags" -> Json.arr("internet", "social-network", "stackoverflow", "reputation"),
+      "actionTags" -> Json.arr("sample"),
+      "properties" -> Json.obj("source" -> "1self-stackoverflow", "count" -> reputationCount.toString)
+    )
 
-    val answersOneselfProperty = OneselfProperty("stackoverlow", answersCount.toString)
-    val answersEvent = OneselfEvent("1self-stackoverflow", "0.0.1",
-      answersOneselfProperty, dateTimeString, "0",
-      Array("internet", "social-network", "stackoverflow", "answers"),
-      Array("sample"))
+    val answersEvent = Json.obj(
+      "source" -> "1self-stackoverflow",
+      "version" -> "0.0.1",
+      "dateTime" -> dateTimeString,
+      "objectTags" -> Json.arr("internet", "social-network", "stackoverflow", "answers"),
+      "actionTags" -> Json.arr("sample"),
+      "properties" -> Json.obj("source" -> "1self-stackoverflow", "count" -> answersCount.toString)
+    )
 
-    val questionsOneselfProperty = OneselfProperty("1self-stackoverflow", questionsCount.toString)
-    val questionsEvent = OneselfEvent("1self-stackoverflow", "0.0.1",
-      questionsOneselfProperty, dateTimeString, "0",
-      Array("internet", "social-network", "stackoverflow", "questions"),
-      Array("sample"))
+    val questionsEvent = Json.obj(
+      "source" -> "1self-stackoverflow",
+      "version" -> "0.0.1",
+      "dateTime" -> dateTimeString,
+      "objectTags" -> Json.arr("internet", "social-network", "stackoverflow", "questions"),
+      "actionTags" -> Json.arr("sample"),
+      "properties" -> Json.obj("source" -> "1self-stackoverflow", "count" -> questionsCount.toString)
+    )
 
     val syncStartEvent = create_sync_start_event
     val syncCompleteEvent = create_sync_complete_event
@@ -153,31 +157,24 @@ object OAuth2 extends Controller {
     events
   }
 
-  def create_sync_start_event: OneselfSyncEvent = {
-    implicit val oneselfPropertyFormat = Json.format[OneselfSyncProperty]
-    implicit val eventsFormat = Json.format[OneselfSyncEvent]
-    val syncStartProperty = OneselfSyncProperty("1self-stackoverlow")
-    val dateTimeString = new DateTime(DateTimeZone.UTC).toString()
-
-    val syncStartEvent = OneselfSyncEvent(
-      syncStartProperty, dateTimeString,
-      Array("sync"),
-      Array("start"))
-
-    syncStartEvent
+  def create_sync_start_event = {
+    val event = Json.obj(
+      "dateTime" -> Json.toJson(new DateTime(DateTimeZone.UTC).toString()),
+      "objectTags" -> Json.arr("sync"),
+      "actionTags" -> Json.arr("start"),
+      "properties" -> Json.obj("source" -> "1self-stackoverflow")
+    )
+    event
   };
 
-  def create_sync_complete_event: OneselfSyncEvent = {
-    implicit val oneselfPropertyFormat = Json.format[OneselfSyncProperty]
-    implicit val eventsFormat = Json.format[OneselfSyncEvent]
-    val syncCompleteProperty = OneselfSyncProperty("1self-stackoverlow")
-    val dateTimeString = new DateTime(DateTimeZone.UTC).toString()
-    val syncCompleteEvent = OneselfSyncEvent(
-      syncCompleteProperty, dateTimeString,
-      Array("sync"),
-      Array("complete"))
-
-    syncCompleteEvent
+  def create_sync_complete_event = {
+    val event = Json.obj(
+      "dateTime" -> Json.toJson(new DateTime(DateTimeZone.UTC).toString()),
+      "objectTags" -> Json.arr("sync"),
+      "actionTags" -> Json.arr("complete"),
+      "properties" -> Json.obj("source" -> "1self-stackoverflow")
+    )
+    event
   };
 
   def sendToOneSelf(streamId: String, writeToken: String, events: JsArray) = {
