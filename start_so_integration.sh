@@ -1,0 +1,1 @@
+/Users/anil/Projects/logg.io/1self-shared-config/start_so_integration.sh

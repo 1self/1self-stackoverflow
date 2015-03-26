@@ -107,7 +107,7 @@ object Oneself extends Controller {
       "dateTime" -> dateTimeString,
       "objectTags" -> Json.arr("internet", "social-network", "stackoverflow", "reputation"),
       "actionTags" -> Json.arr("sample"),
-      "properties" -> Json.obj("points" -> reputationCount.toString)
+      "properties" -> Json.obj("points" -> reputationCount)
     )
 
     val answersEvent = Json.obj(
@@ -116,7 +116,7 @@ object Oneself extends Controller {
       "dateTime" -> dateTimeString,
       "objectTags" -> Json.arr("internet", "social-network", "stackoverflow", "questions"),
       "actionTags" -> Json.arr("sample"),
-      "properties" -> Json.obj("answered" -> answersCount.toString)
+      "properties" -> Json.obj("answered" -> answersCount)
     )
 
     val questionsEvent = Json.obj(
@@ -125,7 +125,7 @@ object Oneself extends Controller {
       "dateTime" -> dateTimeString,
       "objectTags" -> Json.arr("internet", "social-network", "stackoverflow", "questions"),
       "actionTags" -> Json.arr("sample"),
-      "properties" -> Json.obj("asked" -> questionsCount.toString)
+      "properties" -> Json.obj("asked" -> questionsCount)
     )
 
     val syncStartEvent = create_sync_start_event
