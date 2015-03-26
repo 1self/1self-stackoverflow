@@ -2,9 +2,10 @@ package utils
 
 import org.joda.time.{DateTime, DateTimeZone}
 import play.api.Play
-import play.api.libs.json.{JsArray, JsValue, Json}
+import play.api.libs.json.{JsNumber, JsArray, JsValue, Json}
 import play.api.libs.ws.WS
 import play.api.mvc.Controller
+import scala.math.BigDecimal;
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -51,7 +52,7 @@ object Oneself extends Controller {
       .withQueryString(("key", stackOverflowAppKey))
       .get().map { res =>
       val reputation = (res.json \ "items")(0) \ "reputation"
-      val reputationCount = reputation.toString()
+      val reputationCount = BigDecimal(reputation.toString())
       reputationCount
     }
   }
@@ -71,7 +72,7 @@ object Oneself extends Controller {
       val answers = answerItems map { a =>
         a.as[List[JsValue]].size
       }
-      val answersCount = answers(0).toString()
+      val answersCount = BigDecimal(answers(0))
 
       answersCount
     }
@@ -92,13 +93,13 @@ object Oneself extends Controller {
       val questions = questionItems map { q =>
         q.as[List[JsValue]].size
       }
-      val questionsCount = questions(0).toString()
+      val questionsCount = BigDecimal(questions(0))
 
       questionsCount
     }
   }
 
-  def convertTo1SelfEvents(reputationCount: String, questionsCount: String, answersCount: String) = {
+  def convertTo1SelfEvents(reputationCount: BigDecimal, questionsCount: BigDecimal, answersCount: BigDecimal) = {
     val dateTimeString = new DateTime(DateTimeZone.UTC).toString()
 
     val reputationEvent = Json.obj(
@@ -107,7 +108,7 @@ object Oneself extends Controller {
       "dateTime" -> dateTimeString,
       "objectTags" -> Json.arr("internet", "social-network", "stackoverflow", "reputation"),
       "actionTags" -> Json.arr("sample"),
-      "properties" -> Json.obj("points" -> reputationCount)
+      "properties" -> Json.obj("points" -> JsNumber(reputationCount))
     )
 
     val answersEvent = Json.obj(
@@ -116,7 +117,7 @@ object Oneself extends Controller {
       "dateTime" -> dateTimeString,
       "objectTags" -> Json.arr("internet", "social-network", "stackoverflow", "questions"),
       "actionTags" -> Json.arr("sample"),
-      "properties" -> Json.obj("answered" -> answersCount)
+      "properties" -> Json.obj("answered" -> JsNumber(answersCount))
     )
 
     val questionsEvent = Json.obj(
@@ -125,7 +126,7 @@ object Oneself extends Controller {
       "dateTime" -> dateTimeString,
       "objectTags" -> Json.arr("internet", "social-network", "stackoverflow", "questions"),
       "actionTags" -> Json.arr("sample"),
-      "properties" -> Json.obj("asked" -> questionsCount)
+      "properties" -> Json.obj("asked" -> JsNumber(questionsCount))
     )
 
     val syncStartEvent = create_sync_start_event
