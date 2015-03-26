@@ -114,7 +114,7 @@ object Oneself extends Controller {
       "source" -> "1self-stackoverflow",
       "version" -> "0.0.1",
       "dateTime" -> dateTimeString,
-      "objectTags" -> Json.arr("internet", "social-network", "stackoverflow", "answers"),
+      "objectTags" -> Json.arr("internet", "social-network", "stackoverflow", "questions"),
       "actionTags" -> Json.arr("sample"),
       "properties" -> Json.obj("answered" -> answersCount.toString)
     )
