@@ -7,6 +7,8 @@ import play.api.libs.ws.WS
 import play.api.mvc.Controller
 import scala.math.BigDecimal;
 
+import StringUtils._;
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
@@ -52,7 +54,7 @@ object Oneself extends Controller {
       .withQueryString(("key", stackOverflowAppKey))
       .get().map { res =>
       val reputation = (res.json \ "items")(0) \ "reputation"
-      val reputationCount = BigDecimal(reputation.toString())
+      val reputationCount: BigDecimal = reputation.toString().toBigDecimalOpt.getOrElse(0)
       reputationCount
     }
   }
@@ -72,7 +74,7 @@ object Oneself extends Controller {
       val answers = answerItems map { a =>
         a.as[List[JsValue]].size
       }
-      val answersCount = BigDecimal(answers(0))
+      val answersCount: BigDecimal = answers(0).toString().toBigDecimalOpt.getOrElse(0)
 
       answersCount
     }
@@ -93,7 +95,7 @@ object Oneself extends Controller {
       val questions = questionItems map { q =>
         q.as[List[JsValue]].size
       }
-      val questionsCount = BigDecimal(questions(0))
+      val questionsCount: BigDecimal = questions(0).toString().toBigDecimalOpt.getOrElse(0)
 
       questionsCount
     }
