@@ -140,7 +140,7 @@ object Oneself extends Controller {
   def create_sync_start_event = {
     val event = Json.obj(
       "dateTime" -> Json.toJson(new DateTime(DateTimeZone.UTC).toString()),
-      "objectTags" -> Json.arr("sync"),
+      "objectTags" -> Json.arr("1self", "integration", "sync"),
       "actionTags" -> Json.arr("start"),
       "properties" -> Json.obj("source" -> "1self-stackoverflow")
     )
@@ -150,7 +150,7 @@ object Oneself extends Controller {
   def create_sync_complete_event = {
     val event = Json.obj(
       "dateTime" -> Json.toJson(new DateTime(DateTimeZone.UTC).toString()),
-      "objectTags" -> Json.arr("sync"),
+      "objectTags" -> Json.arr("1self", "inegration", "sync"),
       "actionTags" -> Json.arr("complete"),
       "properties" -> Json.obj("source" -> "1self-stackoverflow")
     )
